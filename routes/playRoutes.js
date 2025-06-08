@@ -9,7 +9,7 @@ router.use(authenticate);
 
 /**
  * @swagger
- * /api/games/{gameId}/play:
+ * /games/{gameId}/play:
  *   post:
  *     summary: Registrar una jugada
  *     tags: [Jugadas]
@@ -84,7 +84,7 @@ router.post('/:gameId/play', registerPlay);
 
 /**
  * @swagger
- * /api/games/{gameId}/plays:
+ * /games/{gameId}/plays:
  *   get:
  *     summary: Obtener todas las jugadas de una partida
  *     tags: [Jugadas]

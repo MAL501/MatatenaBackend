@@ -1,26 +1,48 @@
-const { v4: uuidv4 } = require('uuid');
 const { executeQuery } = require('../config/db');
 const { ApiError } = require('../utils/errorHandler');
+
+// Función para generar código aleatorio de 5 caracteres (mayúsculas y números)
+function generateGameCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 // Crear una nueva partida
 async function createGame(req, res, next) {
   try {
     const hostUserId = req.user.id;
     
-    // Generar ID único para la partida
-    const gameId = uuidv4();
+    // Generar código único para la partida
+    let gameCode;
+    let isUnique = false;
+    
+    // Asegurar que el código sea único
+    while (!isUnique) {
+      gameCode = generateGameCode();
+      const existingGame = await executeQuery('SELECT id FROM game WHERE code = ?', [gameCode]);
+      if (existingGame.length === 0) {
+        isUnique = true;
+      }
+    }
     
     // Crear partida en la base de datos
-    await executeQuery(
-      'INSERT INTO game (id, host_user, started_at) VALUES (?, ?, NOW())',
-      [gameId, hostUserId]
+    const result = await executeQuery(
+      'INSERT INTO game (code, host_user, started_at) VALUES (?, ?, NOW())',
+      [gameCode, hostUserId]
     );
+    
+    const gameId = result.insertId;
     
     res.status(201).json({
       status: 'success',
       message: 'Partida creada correctamente',
       data: {
         gameId,
+        gameCode,
         hostUserId
       }
     });
@@ -29,14 +51,18 @@ async function createGame(req, res, next) {
   }
 }
 
-// Unirse a una partida
-async function joinGame(req, res, next) {
+// Unirse a una partida usando el código
+async function joinGameByCode(req, res, next) {
   try {
     const guestUserId = req.user.id;
-    const { gameId } = req.params;
+    const { code } = req.body;
+    
+    if (!code) {
+      throw new ApiError(400, 'Se requiere el código de la partida');
+    }
     
     // Verificar si la partida existe
-    const games = await executeQuery('SELECT * FROM game WHERE id = ?', [gameId]);
+    const games = await executeQuery('SELECT * FROM game WHERE code = ?', [code.toUpperCase()]);
     if (games.length === 0) {
       throw new ApiError(404, 'Partida no encontrada');
     }
@@ -56,16 +82,25 @@ async function joinGame(req, res, next) {
     // Actualizar la partida con el usuario invitado
     await executeQuery(
       'UPDATE game SET guest_user = ? WHERE id = ?',
-      [guestUserId, gameId]
+      [guestUserId, game.id]
     );
+    
+    // Obtener información completa de la partida con nombres de usuario
+    const updatedGame = await executeQuery(`
+      SELECT g.*, 
+             host.username AS host_username, 
+             guest.username AS guest_username
+      FROM game g
+      LEFT JOIN users host ON g.host_user = host.id
+      LEFT JOIN users guest ON g.guest_user = guest.id
+      WHERE g.id = ?
+    `, [game.id]);
     
     res.status(200).json({
       status: 'success',
       message: 'Te has unido a la partida correctamente',
       data: {
-        gameId,
-        hostUserId: game.host_user,
-        guestUserId
+        game: updatedGame[0]
       }
     });
   } catch (error) {
@@ -103,12 +138,16 @@ async function endGame(req, res, next) {
       [winnerId, gameId]
     );
     
+    // Obtener información del ganador
+    const winner = await executeQuery('SELECT username FROM users WHERE id = ?', [winnerId]);
+    
     res.status(200).json({
       status: 'success',
       message: 'Partida finalizada correctamente',
       data: {
         gameId,
-        winnerId
+        winnerId,
+        winnerUsername: winner[0].username
       }
     });
   } catch (error) {
@@ -149,9 +188,43 @@ async function getGame(req, res, next) {
   }
 }
 
+// Obtener partida por código
+async function getGameByCode(req, res, next) {
+  try {
+    const { code } = req.params;
+    
+    // Obtener información de la partida con nombres de usuario
+    const games = await executeQuery(`
+      SELECT g.*, 
+             host.username AS host_username, 
+             guest.username AS guest_username,
+             winner.username AS winner_username
+      FROM game g
+      LEFT JOIN users host ON g.host_user = host.id
+      LEFT JOIN users guest ON g.guest_user = guest.id
+      LEFT JOIN users winner ON g.winner = winner.id
+      WHERE g.code = ?
+    `, [code.toUpperCase()]);
+    
+    if (games.length === 0) {
+      throw new ApiError(404, 'Partida no encontrada');
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        game: games[0]
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createGame,
-  joinGame,
+  joinGameByCode,
   endGame,
-  getGame
+  getGame,
+  getGameByCode
 };

@@ -1,6 +1,5 @@
-const swaggerJSDoc = require('swagger-jsdoc');
-
-const swaggerDefinition = {
+// Definición directa sin usar swagger-jsdoc
+const swaggerSpec = {
   openapi: '3.0.0',
   info: {
     title: 'Matatena API',
@@ -17,6 +16,121 @@ const swaggerDefinition = {
       description: 'Servidor de desarrollo'
     }
   ],
+  paths: {
+    '/auth/register': {
+      post: {
+        summary: 'Registrar un nuevo usuario',
+        tags: ['Autenticación'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['username', 'password'],
+                properties: {
+                  username: {
+                    type: 'string',
+                    example: 'jugador1'
+                  },
+                  password: {
+                    type: 'string',
+                    example: 'contraseña123'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Usuario registrado correctamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: {
+                      type: 'string',
+                      example: 'success'
+                    },
+                    message: {
+                      type: 'string',
+                      example: 'Usuario registrado correctamente'
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        user: {
+                          $ref: '#/components/schemas/User'
+                        },
+                        tokens: {
+                          type: 'object',
+                          properties: {
+                            accessToken: {
+                              type: 'string'
+                            },
+                            refreshToken: {
+                              type: 'string'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/auth/login': {
+      post: {
+        summary: 'Iniciar sesión',
+        tags: ['Autenticación'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['username', 'password'],
+                properties: {
+                  username: {
+                    type: 'string',
+                    example: 'jugador1'
+                  },
+                  password: {
+                    type: 'string',
+                    example: 'contraseña123'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Inicio de sesión exitoso'
+          }
+        }
+      }
+    },
+    '/games': {
+      post: {
+        summary: 'Crear una nueva partida',
+        tags: ['Juegos'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '201': {
+            description: 'Partida creada correctamente'
+          }
+        }
+      }
+    }
+    // Aquí irían el resto de las rutas...
+  },
   components: {
     securitySchemes: {
       bearerAuth: {
@@ -74,79 +188,9 @@ const swaggerDefinition = {
             description: 'Fecha de finalización de la partida'
           }
         }
-      },
-      Play: {
-        type: 'object',
-        properties: {
-          id: {
-            type: 'string',
-            description: 'ID único de la jugada (UUID)'
-          },
-          match_id: {
-            type: 'string',
-            description: 'ID de la partida'
-          },
-          move: {
-            type: 'integer',
-            description: 'ID del usuario que hizo la jugada'
-          },
-          dice: {
-            type: 'integer',
-            minimum: 1,
-            maximum: 6,
-            description: 'Valor del dado (1-6)'
-          },
-          column: {
-            type: 'integer',
-            minimum: 0,
-            maximum: 2,
-            description: 'Columna donde se coloca el dado (0-2)'
-          }
-        }
-      },
-      Error: {
-        type: 'object',
-        properties: {
-          status: {
-            type: 'string',
-            example: 'error'
-          },
-          statusCode: {
-            type: 'integer',
-            example: 400
-          },
-          message: {
-            type: 'string',
-            example: 'Mensaje de error'
-          }
-        }
-      },
-      Success: {
-        type: 'object',
-        properties: {
-          status: {
-            type: 'string',
-            example: 'success'
-          },
-          message: {
-            type: 'string',
-            example: 'Operación exitosa'
-          },
-          data: {
-            type: 'object',
-            description: 'Datos de respuesta'
-          }
-        }
       }
     }
   }
 };
-
-const options = {
-  swaggerDefinition,
-  apis: ['./routes/*.js'], // Rutas donde están las anotaciones de Swagger
-};
-
-const swaggerSpec = swaggerJSDoc(options);
 
 module.exports = swaggerSpec;

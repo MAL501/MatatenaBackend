@@ -1,6 +1,5 @@
 const { executeQuery } = require('../config/db');
 const { ApiError } = require('../utils/errorHandler');
-const { v4: uuidv4 } = require('uuid');
 
 // Registrar una jugada
 async function registerPlay(req, res, next) {
@@ -39,6 +38,11 @@ async function registerPlay(req, res, next) {
       throw new ApiError(400, 'La partida ya ha terminado');
     }
     
+    // Verificar que la partida tenga ambos jugadores
+    if (!game.guest_user) {
+      throw new ApiError(400, 'La partida aún no tiene un segundo jugador');
+    }
+    
     // Verificar que sea el turno del jugador
     const lastPlay = await executeQuery(
       'SELECT * FROM plays WHERE match_id = ? ORDER BY id DESC LIMIT 1',
@@ -50,14 +54,16 @@ async function registerPlay(req, res, next) {
       throw new ApiError(400, 'No es tu turno');
     }
     
-    // Generar ID único para la jugada
-    const playId = uuidv4();
-    
     // Registrar la jugada
-    await executeQuery(
-      'INSERT INTO plays (id, match_id, move, dice, column) VALUES (?, ?, ?, ?, ?)',
-      [playId, gameId, userId, dice, column]
+    const result = await executeQuery(
+      'INSERT INTO plays (match_id, move, dice, col, created_at) VALUES (?, ?, ?, ?, NOW())',
+      [gameId, userId, dice, column]
     );
+    
+    const playId = result.insertId;
+    
+    // Obtener información del usuario que hizo la jugada
+    const user = await executeQuery('SELECT username FROM users WHERE id = ?', [userId]);
     
     res.status(201).json({
       status: 'success',
@@ -66,6 +72,7 @@ async function registerPlay(req, res, next) {
         playId,
         gameId,
         userId,
+        username: user[0].username,
         dice,
         column
       }

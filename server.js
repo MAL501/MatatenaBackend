@@ -39,10 +39,10 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-// Rutas
-app.use('/api/auth', authRoutes);
-app.use('/api/games', gameRoutes);
-app.use('/api/games', playRoutes);
+// Rutas (SIN /api)
+app.use('/auth', authRoutes);
+app.use('/games', gameRoutes);
+app.use('/games', playRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
