@@ -1,11 +1,18 @@
-const express = require('express');
-const { createGame, joinGameByCode, endGame, getGame, getGameByCode } = require('../controllers/gameController');
-const { authenticate } = require('../middleware/authMiddleware');
+const express = require("express")
+const {
+  createGame,
+  joinGameByCode,
+  endGame,
+  getGame,
+  getGameByCode,
+  getGameState,
+} = require("../controllers/gameController")
+const { authenticate } = require("../middleware/authMiddleware")
 
-const router = express.Router();
+const router = express.Router()
 
 // Todas las rutas requieren autenticación
-router.use(authenticate);
+router.use(authenticate)
 
 /**
  * @swagger
@@ -19,7 +26,7 @@ router.use(authenticate);
  *       201:
  *         description: Partida creada correctamente
  */
-router.post('/', createGame);
+router.post("/", createGame)
 
 /**
  * @swagger
@@ -45,7 +52,7 @@ router.post('/', createGame);
  *       200:
  *         description: Te has unido a la partida correctamente
  */
-router.post('/join', joinGameByCode);
+router.post("/join", joinGameByCode)
 
 /**
  * @swagger
@@ -56,7 +63,7 @@ router.post('/join', joinGameByCode);
  *     security:
  *       - bearerAuth: []
  */
-router.put('/:gameId/end', endGame);
+router.put("/:gameId/end", endGame)
 
 /**
  * @swagger
@@ -67,7 +74,7 @@ router.put('/:gameId/end', endGame);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/:gameId', getGame);
+router.get("/:gameId", getGame)
 
 /**
  * @swagger
@@ -78,6 +85,57 @@ router.get('/:gameId', getGame);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/code/:code', getGameByCode);
+router.get("/code/:code", getGameByCode)
 
-module.exports = router;
+/**
+ * @swagger
+ * /games/{gameId}/state:
+ *   get:
+ *     summary: Obtener estado completo de una partida con información de columnas
+ *     tags: [Juegos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: gameId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID único de la partida
+ *     responses:
+ *       200:
+ *         description: Estado completo de la partida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         game:
+ *                           $ref: '#/components/schemas/Game'
+ *                         columns:
+ *                           type: object
+ *                           description: Estado de todas las columnas del juego
+ *                         columnAvailability:
+ *                           type: object
+ *                           description: Espacios disponibles en cada columna
+ *                         currentTurn:
+ *                           type: integer
+ *                           description: ID del usuario cuyo turno es actual
+ *                         plays:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Play'
+ *                         gameStatus:
+ *                           type: string
+ *                           enum: [waiting, playing, finished]
+ *       404:
+ *         description: Partida no encontrada
+ */
+router.get("/:gameId/state", getGameState)
+
+module.exports = router
