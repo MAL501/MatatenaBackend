@@ -5,7 +5,7 @@ const { executeQuery } = require("../config/db")
 function setupWebSockets(server) {
   const io = new Server(server, {
     cors: {
-      origin: "*", // En producción, limitar a tu dominio frontend
+      origin: process.env.CORS_ORIGIN || "*", // Usar variable de entorno para CORS
       methods: ["GET", "POST"],
     },
   })
