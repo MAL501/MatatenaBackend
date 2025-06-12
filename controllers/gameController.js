@@ -324,6 +324,35 @@ async function getGameState(req, res, next) {
   }
 }
 
+// Eliminar una partida (solo el host puede eliminarla)
+async function deleteGame(req, res, next) {
+  try {
+    const userId = req.user.id
+    const { gameId } = req.params
+
+    // Verificar que la partida existe y el usuario es el host
+    const games = await executeQuery(
+      "SELECT * FROM game WHERE id = ? AND host_user = ?",
+      [gameId, userId],
+    )
+
+    if (games.length === 0) {
+      throw new ApiError(403, "Solo el host puede eliminar la partida o la partida no existe")
+    }
+
+    // Eliminar la partida
+    await executeQuery("DELETE FROM game WHERE id = ?", [gameId])
+
+    res.status(200).json({
+      status: "success",
+      message: "Partida eliminada correctamente",
+      data: { gameId },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createGame,
   joinGameByCode,
@@ -331,4 +360,5 @@ module.exports = {
   getGame,
   getGameByCode,
   getGameState,
+  deleteGame, // Exportar el nuevo servicio
 }

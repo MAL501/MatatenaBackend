@@ -23,105 +23,63 @@ function getWeightedRandomDice(probabilities) {
   return 6
 }
 
-// Registrar una jugada - AHORA EL SERVIDOR PROPORCIONA EL DADO
 async function registerPlay(req, res, next) {
   try {
-    const userId = req.user.id
-    const { gameId } = req.params
-    const { column } = req.body // Solo necesitamos la columna, el dado lo genera el servidor
+    const userId = req.user.id;
+    const { gameId } = req.params;
+    const { column, dice} = req.body;
 
-    // Validar que la columna esté presente
+    // Validar que la columna esté presente y sea válida
     if (column === undefined) {
-      throw new ApiError(400, "Se requiere la columna")
+      throw new ApiError(400, "Se requiere la columna");
     }
 
-    // Validar que column sea un string válido del frontend
     if (!["1", "2", "3", "4", "5", "6"].includes(column.toString())) {
-      throw new ApiError(400, "La columna debe ser 1, 2, 3, 4, 5 o 6")
+      throw new ApiError(400, "La columna debe ser 1, 2, 3, 4, 5 o 6");
+    }
+
+    // Validar que el dado esté presente y sea un número válido
+    if (dice === undefined || dice < 1 || dice > 6) {
+      throw new ApiError(400, "El valor del dado debe estar entre 1 y 6");
     }
 
     // Verificar que la partida existe y el usuario es parte de ella
-    const games = await executeQuery("SELECT * FROM game WHERE id = ? AND (host_user = ? OR guest_user = ?)", [
-      gameId,
-      userId,
-      userId,
-    ])
+    const games = await executeQuery(
+      "SELECT * FROM game WHERE id = ? AND (host_user = ? OR guest_user = ?)",
+      [gameId, userId, userId]
+    );
 
     if (games.length === 0) {
-      throw new ApiError(404, "Partida no encontrada o no eres parte de ella")
+      throw new ApiError(404, "Partida no encontrada o no eres parte de ella");
     }
 
-    // Obtener las probabilidades del usuario y generar el dado
-    const gamblingData = await executeQuery(
-      "SELECT dice_1, dice_2, dice_3, dice_4, dice_5, dice_6 FROM gambling WHERE user_id = ?",
-      [userId],
-    )
+    // A partir de aquí deberías manejar la lógica del juego:
+    // - Registrar la jugada en la base de datos
+    // - Validar reglas del juego
+    // - Aplicar la jugada (por ejemplo, insertar en la tabla "plays")
+    // - Procesar la eliminación del oponente si `processOpponentRemoval` es true
 
-    let dice
+    // Simulación de inserción de jugada (reemplaza con tu lógica real)
+    await executeQuery(
+      "INSERT INTO play (game_id, user_id, column, dice, created_at) VALUES (?, ?, ?, ?, NOW())",
+      [gameId, userId, column, dice]
+    );
 
-    if (gamblingData.length === 0) {
-      // Si no hay datos de gambling, usar probabilidades iguales
-      const defaultProb = 1.0 / 6
-      const probabilities = [defaultProb, defaultProb, defaultProb, defaultProb, defaultProb, defaultProb]
-      dice = getWeightedRandomDice(probabilities)
-
-      // Crear registro por defecto
-      await executeQuery(
-        "INSERT INTO gambling (user_id, dice_1, dice_2, dice_3, dice_4, dice_5, dice_6, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
-        [userId, defaultProb, defaultProb, defaultProb, defaultProb, defaultProb, defaultProb],
-      )
-    } else {
-      // Usar las probabilidades existentes
-      const data = gamblingData[0]
-      const probabilities = [
-        Number.parseFloat(data.dice_1),
-        Number.parseFloat(data.dice_2),
-        Number.parseFloat(data.dice_3),
-        Number.parseFloat(data.dice_4),
-        Number.parseFloat(data.dice_5),
-        Number.parseFloat(data.dice_6),
-      ]
-      dice = getWeightedRandomDice(probabilities)
-    }
-
-    // Convertir el ID de columna del frontend al formato de la base de datos
-    let dbColumn
-    if (["1", "2", "3"].includes(column.toString())) {
-      dbColumn = Number.parseInt(column.toString()) - 1 // 0, 1, 2
-    } else {
-      dbColumn = Number.parseInt(column.toString()) - 4 // 0, 1, 2
-    }
-
-    // Registrar la jugada con el dado generado por el servidor
-    const result = await executeQuery(
-      "INSERT INTO plays (match_id, move, dice, col, created_at) VALUES (?, ?, ?, ?, NOW())",
-      [gameId, userId, dice, dbColumn],
-    )
-
-    const playId = result.insertId
-
-    // Obtener información del usuario que hizo la jugada
-    const user = await executeQuery("SELECT username FROM users WHERE id = ?", [userId])
-
-    console.log(`🎲 Jugada registrada: Usuario ${userId} obtuvo dado ${dice} en columna ${column}`)
-
-    res.status(201).json({
+    res.status(200).json({
       status: "success",
-      message: "Jugada registrada correctamente",
       data: {
-        playId,
+        message: "Jugada registrada exitosamente",
         gameId,
         userId,
-        username: user[0].username,
-        dice, // El dado generado por el servidor
-        column: column.toString(),
-        dbColumn,
+        column,
+        dice,
       },
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
 }
+
 
 // Obtener jugadas de una partida
 async function getGamePlays(req, res, next) {

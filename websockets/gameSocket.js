@@ -57,6 +57,10 @@ function setupWebSockets(server) {
     // Unirse a una sala de juego
     socket.on("joinGame", async (gameId) => {
       try {
+        if (!gameId || isNaN(Number(gameId))) {
+          socket.emit("error", { message: "ID de partida inválido" })
+          return
+        }
         // Verificar que el usuario es parte de la partida
         const games = await executeQuery(
           "SELECT g.*, host.username AS host_username, guest.username AS guest_username FROM game g LEFT JOIN users host ON g.host_user = host.id LEFT JOIN users guest ON g.guest_user = guest.id WHERE g.id = ? AND (g.host_user = ? OR g.guest_user = ?)",

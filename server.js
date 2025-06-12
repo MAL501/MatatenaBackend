@@ -28,6 +28,12 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Logging de rutas
+app.use((req, res, next) => {
+  //console.log(`${req.method} ${req.url}`);
+  next();
+});
+
 // Documentación Swagger
 app.use(
   "/api-docs",
@@ -46,9 +52,9 @@ app.get("/api-docs.json", (req, res) => {
 
 // Rutas
 app.use("/auth", authRoutes)
-app.use("/games", gameRoutes)
+app.use("/dice", diceRoutes) 
 app.use("/games", playRoutes)
-app.use("/dice", diceRoutes) // Nueva ruta para dados
+app.use("/games", gameRoutes)
 
 // Ruta de prueba
 app.get("/", (req, res) => {

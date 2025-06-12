@@ -6,6 +6,7 @@ const {
   getGame,
   getGameByCode,
   getGameState,
+  deleteGame, // Importar el servicio
 } = require("../controllers/gameController")
 const { authenticate } = require("../middleware/authMiddleware")
 
@@ -137,5 +138,28 @@ router.get("/code/:code", getGameByCode)
  *         description: Partida no encontrada
  */
 router.get("/:gameId/state", getGameState)
+
+/**
+ * @swagger
+ * /games/{gameId}:
+ *   delete:
+ *     summary: Eliminar una partida (solo el host puede eliminarla)
+ *     tags: [Juegos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: gameId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID único de la partida
+ *     responses:
+ *       200:
+ *         description: Partida eliminada correctamente
+ *       403:
+ *         description: Solo el host puede eliminar la partida o la partida no existe
+ */
+router.delete("/:gameId", deleteGame)
 
 module.exports = router
